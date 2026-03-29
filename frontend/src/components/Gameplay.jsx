@@ -10,11 +10,12 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
   const currentStep = steps.find(s => s.id === currentRound);
   
   // Efek untuk membersihkan status loading jika hasSubmitted berubah (berhasil dicancel)
+  // ATAU jika terjadi error, agar tombol kembali bisa diklik
   useEffect(() => {
-    if (!me?.hasSubmitted) {
+    if (!me?.hasSubmitted || error) {
       setIsCancelling(false);
     }
-  }, [me?.hasSubmitted]);
+  }, [me?.hasSubmitted, error]);
 
   if (!room || room.state !== 'playing') return null;
   
@@ -40,17 +41,26 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
         <h2 style={{ color: 'var(--ink-color)' }}>Terlipat!</h2>
         <p style={{ fontSize: '1.2rem', margin: '20px 0' }}>Kertasmu sudah dioper. Tunggu pemain lain selesai melipat ya...</p>
         
-        <div style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', margin: '20px 0' }}>
-          <p style={{ fontWeight: 'bold' }}>Progres: {submittedCount} / {totalPlayers} Pemain</p>
+        {/* Tampilan progres tanpa kotak latar belakang */}
+        <div style={{ padding: '15px', margin: '20px 0', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd' }}>
+          <p style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>Progres: {submittedCount} / {totalPlayers} Pemain</p>
           {pendingPlayers.length > 0 && (
-            <p style={{ fontSize: '0.9rem', color: '#666' }}>Menunggu: {pendingPlayers.join(', ')}</p>
+            <p style={{ fontSize: '1rem', color: '#666', marginTop: '10px' }}>Menunggu: <span style={{ fontStyle: 'italic' }}>{pendingPlayers.join(', ')}</span></p>
           )}
         </div>
+
+        {error && <div className="error-msg" style={{ color: '#e74c3c', marginBottom: '15px' }}>{error}</div>}
 
         <button 
           onClick={handleCancelClick} 
           disabled={isCancelling}
-          style={{ backgroundColor: '#e74c3c', opacity: isCancelling ? 0.7 : 1, marginTop: '20px' }}
+          style={{ 
+            backgroundColor: '#e74c3c', 
+            opacity: isCancelling ? 0.7 : 1, 
+            marginTop: '20px',
+            transform: isCancelling ? 'scale(0.98)' : 'scale(1)',
+            transition: 'all 0.2s ease'
+          }}
         >
           {isCancelling ? 'Memproses...' : 'Ganti Jawaban'}
         </button>
