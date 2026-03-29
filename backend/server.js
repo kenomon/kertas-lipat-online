@@ -139,8 +139,12 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('cancel_step', ({ roomId }) => {
-    const result = cancelStep(roomId, socket.id);
+  socket.on('cancel_step', ({ roomId, playerId }) => {
+    const roomIdUpper = roomId?.toUpperCase();
+    // Gunakan playerId dari frontend jika ada (lebih stabil), fallback ke socket.id
+    const targetId = playerId || socket.id;
+    console.log(`-- CANCEL STEP REQUEST: Room ${roomIdUpper}, Player ${targetId} --`);
+    const result = cancelStep(roomIdUpper, targetId);
     if (result.error) {
       console.log(`-- CANCEL STEP ERROR: ${result.error} --`);
       socket.emit('error_message', result.error);

@@ -14,6 +14,7 @@ function App() {
   const [gameState, setGameState] = useState('welcome'); // welcome, lobby, playing, reveal
   const [room, setRoom] = useState(null);
   const [playerName, setPlayerName] = useState('');
+  const [myPlayerId, setMyPlayerId] = useState(''); // ID stabil untuk identitas di server
   const [error, setError] = useState('');
   const [steps, setSteps] = useState([]);
 
@@ -30,12 +31,14 @@ function App() {
     };
 
     socket.on('room_created', (r) => {
+      setMyPlayerId(socket.id);
       setRoom(r);
       setGameState('lobby');
       setError('');
     });
 
     socket.on('room_joined', (r) => {
+      setMyPlayerId(socket.id);
       setRoom(r);
       setGameState('lobby');
       setError('');
@@ -102,8 +105,8 @@ function App() {
 
   const handleCancelStep = () => {
     if (room) {
-      console.log('-- ACTION: cancel_step --', room.id);
-      socket.emit('cancel_step', { roomId: room.id });
+      console.log('-- ACTION: cancel_step --', room.id, myPlayerId);
+      socket.emit('cancel_step', { roomId: room.id, playerId: myPlayerId });
     }
   };
 
@@ -128,9 +131,9 @@ function App() {
       case 'howtoplay':
         return <HowToPlay onBack={handleBackFromHowToPlay} />;
       case 'lobby':
-        return <Lobby room={room} socket={socket} onStart={handleStartGame} error={error} />;
+        return <Lobby room={room} socket={socket} onStart={handleStartGame} error={error} myPlayerId={myPlayerId} />;
       case 'playing':
-        return <Gameplay room={room} socketId={socket.id} steps={steps} onSubmit={handleSubmitStep} onCancel={handleCancelStep} error={error} />;
+        return <Gameplay room={room} socketId={myPlayerId} steps={steps} onSubmit={handleSubmitStep} onCancel={handleCancelStep} error={error} />;
       case 'interrupted':
         return (
           <div className="paper-content" style={{ textAlign: 'center' }}>

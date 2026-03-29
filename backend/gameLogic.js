@@ -197,15 +197,34 @@ export function cancelStep(roomId, socketId) {
   const room = rooms.get(roomId);
   if (!room || room.state !== 'playing') return { error: 'Game not active' };
   
+  // Cari pemain berdasarkan ID stabil (myPlayerId dari frontend)
   const player = room.players.find(p => p.id === socketId);
-  if (!player || !player.hasSubmitted) return { error: 'Not submitted yet' };
-
-  const paperEntry = Object.entries(room.papers).find(([_, paper]) => paper.currentHolderId === socketId);
-  if (!paperEntry) return { error: 'Paper not found for player' };
   
-  const [paperId, paper] = paperEntry;
-  if (paper.steps.length > 0 && paper.steps[paper.steps.length - 1].round === room.round) {
-    paper.steps.pop();
+  if (!player) {
+    console.log(`-- SERVER: playerId ${socketId} not found in room ${roomId} --`);
+    return { error: 'Identitas pemain tidak sinkron. Coba refresh halaman.' };
+  }
+
+  if (!player.hasSubmitted) {
+    return { error: 'Kamu belum mengirim jawaban ronde ini.' };
+  }
+
+  // Cari kertas yang saat ini dipegang oleh pemain ini
+  let targetPaper = null;
+  for (const paperId in room.papers) {
+    if (room.papers[paperId].currentHolderId === player.id) {
+      targetPaper = room.papers[paperId];
+      break;
+    }
+  }
+
+  if (targetPaper && targetPaper.steps.length > 0) {
+    const lastStep = targetPaper.steps[targetPaper.steps.length - 1];
+    // Pastikan langkah terakhir memang miliknya di ronde ini
+    if (lastStep.authorId === player.id && lastStep.round === room.round) {
+      targetPaper.steps.pop();
+      console.log(`-- SERVER: Popped step for ${player.name} in round ${room.round} --`);
+    }
   }
   
   player.hasSubmitted = false;
