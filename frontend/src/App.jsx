@@ -71,6 +71,22 @@ function App() {
       setTimeout(() => setError(''), 5000);
     });
 
+    socket.on('cancel_step', ({ roomId }) => {
+      const result = cancelStep(roomId, socket.id);
+      if (result.error) {
+        socket.emit('error_message', result.error);
+      } else {
+        io.to(roomId).emit('game_update', result);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      setRoom(null);
+      setGameState('welcome');
+      setError('Kamu telah dikeluarkan dari ruangan oleh Host.');
+      setTimeout(() => setError(''), 5000);
+    });
+
     return () => {
       socket.off('room_created');
       socket.off('room_joined');
@@ -133,7 +149,8 @@ function App() {
         return (
           <div className="paper-content" style={{ textAlign: 'center' }}>
             <h2 style={{ color: '#e74c3c' }}>Permainan Terhenti</h2>
-            <div style={{ marginTop: '50px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p style={{ fontWeight: 'bold', fontSize: '1.2rem', margin: '30px 0' }}>Seseorang keluar dari ruangan.</p>
+            <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button onClick={handleBackToLobby} style={{ backgroundColor: 'var(--ink-color)' }}>Kembali ke Ruang Tunggu</button>
               <button onClick={handleLeaveRoom} style={{ backgroundColor: 'var(--ink-color)' }}>Keluar ke Halaman Awal</button>
             </div>
