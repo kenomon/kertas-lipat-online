@@ -146,9 +146,10 @@ io.on('connection', (socket) => {
       socket.emit('error_message', result.error);
     } else {
       console.log(`-- CANCEL STEP SUCCESS: Room ${roomId}, Player ${socket.id} --`);
-      // Emit to everyone in the room to sync state
-      io.to(roomId).emit('room_update', result);
-      io.to(roomId).emit('game_update', result);
+      // Gunakan Deep Clone untuk memaksa React di frontend melakukan re-render
+      const freshRoom = JSON.parse(JSON.stringify(result));
+      io.to(roomId).emit('room_update', freshRoom);
+      io.to(roomId).emit('game_update', freshRoom);
     }
   });
 
