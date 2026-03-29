@@ -11,8 +11,11 @@ RUN npm install
 # Copy all backend files
 COPY . .
 
-# EXPOSE port 3001 (sesuai setting server.js kita)
-EXPOSE 3001
+# Set PORT environment variable
+ENV PORT=7860
+
+# EXPOSE port 7860
+EXPOSE 7860
 
 # Jalankan server
 CMD ["node", "server.js"]

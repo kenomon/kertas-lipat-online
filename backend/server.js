@@ -14,7 +14,7 @@ const io = new Server(httpServer, {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 7860;
 
 app.get('/', (req, res) => {
   res.send('Kertas Lipat Digital Server is running');
@@ -153,6 +153,7 @@ io.on('connection', (socket) => {
   });
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`-- SERVER RUNNING ON PORT ${PORT} --`);
+  console.log(`-- HOST BINDING TO 0.0.0.0 --`);
 });
