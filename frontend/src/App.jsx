@@ -133,8 +133,7 @@ function App() {
         return (
           <div className="paper-content" style={{ textAlign: 'center' }}>
             <h2 style={{ color: '#e74c3c' }}>Permainan Terhenti</h2>
-            <p style={{ fontWeight: 'bold', fontSize: '1.2rem', margin: '30px 0' }}>{error || 'Seseorang keluar dari ruangan.'}</p>
-            <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ marginTop: '50px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button onClick={handleBackToLobby} style={{ backgroundColor: 'var(--ink-color)' }}>Kembali ke Ruang Tunggu</button>
               <button onClick={handleLeaveRoom} style={{ backgroundColor: 'var(--ink-color)' }}>Keluar ke Halaman Awal</button>
             </div>
