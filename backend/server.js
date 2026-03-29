@@ -139,6 +139,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('cancel_step', ({ roomId }) => {
+    const result = cancelStep(roomId, socket.id);
+    if (result.error) {
+      console.log(`-- CANCEL STEP ERROR: ${result.error} --`);
+      socket.emit('error_message', result.error);
+    } else {
+      console.log(`-- CANCEL STEP SUCCESS: Room ${roomId}, Player ${socket.id} --`);
+      // Emit to everyone in the room to sync state
+      io.to(roomId).emit('room_update', result);
+      io.to(roomId).emit('game_update', result);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     const affectedRooms = disconnectUser(socket.id);

@@ -3,11 +3,17 @@ import { useState, useEffect } from 'react';
 export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, error }) {
   const [text, setText] = useState('');
   
-  if (!room || room.state !== 'playing') return null;
-  
-  const me = room.players.find(p => p.id === socketId);
+  // Ambil data diri sendiri. Pastikan menggunakan socketId yang stabil.
+  const me = room.players.find(p => p.id === (socketId || ''));
   const currentRound = room.round;
   const currentStep = steps.find(s => s.id === currentRound);
+  
+  // Efek untuk membersihkan input jika kita baru saja membatalkan jawaban
+  useEffect(() => {
+    // Optional: we can clear text here if we want a fresh start
+  }, [me?.hasSubmitted]);
+
+  if (!room || room.state !== 'playing') return null;
   
   const handleSubmit = () => {
     if (text) {

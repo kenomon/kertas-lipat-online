@@ -20,6 +20,15 @@ function App() {
   useEffect(() => {
     socket.connect();
 
+    const handleUpdate = (r) => {
+      console.log('-- UPDATE RECEIVED --', r.state, r);
+      setRoom(r);
+      // Jika status room kembali ke lobby saat kita sedang playing, tandanya ada gangguan
+      if (gameState === 'playing' && r.state === 'lobby') {
+        setGameState('interrupted');
+      }
+    };
+
     socket.on('room_created', (r) => {
       setRoom(r);
       setGameState('lobby');
@@ -32,23 +41,13 @@ function App() {
       setError('');
     });
 
-    socket.on('room_update', (r) => {
-      // Jika sebelumnya sedang bermain tapi tiba-tiba status room kembali ke lobby, 
-      // berarti permainan terhenti (biasanya karena ada yang disconnect)
-      if (gameState === 'playing' && r.state === 'lobby') {
-        setGameState('interrupted');
-      }
-      setRoom(r);
-    });
+    socket.on('room_update', handleUpdate);
+    socket.on('game_update', handleUpdate);
 
     socket.on('game_started', ({ room: r, steps: gameSteps }) => {
       setRoom(r);
       setSteps(gameSteps);
       setGameState('playing');
-    });
-
-    socket.on('game_update', (r) => {
-      setRoom(r);
     });
 
     socket.on('round_finished', (r) => {
@@ -59,8 +58,8 @@ function App() {
     });
 
     socket.on('error_message', (msg) => {
+      console.error('-- SERVER ERROR --', msg);
       setError(msg);
-      // Auto-clear error
       setTimeout(() => setError(''), 5000);
     });
 
@@ -71,28 +70,12 @@ function App() {
       setTimeout(() => setError(''), 5000);
     });
 
-    socket.on('cancel_step', ({ roomId }) => {
-      const result = cancelStep(roomId, socket.id);
-      if (result.error) {
-        socket.emit('error_message', result.error);
-      } else {
-        io.to(roomId).emit('game_update', result);
-      }
-    });
-
-    socket.on('disconnect', () => {
-      setRoom(null);
-      setGameState('welcome');
-      setError('Kamu telah dikeluarkan dari ruangan oleh Host.');
-      setTimeout(() => setError(''), 5000);
-    });
-
     return () => {
       socket.off('room_created');
       socket.off('room_joined');
       socket.off('room_update');
-      socket.off('game_started');
       socket.off('game_update');
+      socket.off('game_started');
       socket.off('round_finished');
       socket.off('error_message');
       socket.off('kicked');
@@ -118,7 +101,10 @@ function App() {
   };
 
   const handleCancelStep = () => {
-    if (room) socket.emit('cancel_step', { roomId: room.id });
+    if (room) {
+      console.log('-- ACTION: cancel_step --', room.id);
+      socket.emit('cancel_step', { roomId: room.id });
+    }
   };
 
   const handleLeaveRoom = () => {
