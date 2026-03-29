@@ -144,11 +144,8 @@ io.on('connection', (socket) => {
     const affectedRooms = disconnectUser(socket.id);
     affectedRooms.forEach(({ room, disconnectedName, wasPlaying }) => {
       io.to(room.id).emit('room_update', room);
-      if (wasPlaying) {
-          io.to(room.id).emit('error_message', `Pemain "${disconnectedName}" terputus. Permainan dibatalkan dan kembali ke Ruang Tunggu.`);
-      } else {
-          io.to(room.id).emit('error_message', `Pemain "${disconnectedName}" keluar dari ruangan.`);
-      }
+      const msg = `Pemain "${disconnectedName}" keluar dari ruangan.`;
+      io.to(room.id).emit('error_message', wasPlaying ? `${msg} Permainan dibatalkan.` : msg);
     });
   });
 });
