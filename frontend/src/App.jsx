@@ -33,6 +33,11 @@ function App() {
     });
 
     socket.on('room_update', (r) => {
+      // Jika sebelumnya sedang bermain tapi tiba-tiba status room kembali ke lobby, 
+      // berarti permainan terhenti (biasanya karena ada yang disconnect)
+      if (gameState === 'playing' && r.state === 'lobby') {
+        setGameState('interrupted');
+      }
       setRoom(r);
     });
 
@@ -124,6 +129,18 @@ function App() {
         return <Lobby room={room} socket={socket} onStart={handleStartGame} error={error} />;
       case 'playing':
         return <Gameplay room={room} socketId={socket.id} steps={steps} onSubmit={handleSubmitStep} onCancel={handleCancelStep} error={error} />;
+      case 'interrupted':
+        return (
+          <div className="paper-content" style={{ textAlign: 'center' }}>
+            <h2 style={{ color: '#e74c3c' }}>Permainan Terhenti</h2>
+            <p style={{ fontWeight: 'bold', fontSize: '1.1rem', margin: '20px 0' }}>{error || 'Seseorang keluar dari ruangan.'}</p>
+            <p style={{ color: '#7f8c8d' }}>Maaf, permainan tidak bisa dilanjutkan karena ada pemain yang terputus.</p>
+            <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button onClick={handleBackToLobby} style={{ backgroundColor: 'var(--ink-color)' }}>Kembali ke Ruang Tunggu</button>
+              <button onClick={handleLeaveRoom} style={{ backgroundColor: '#bdc3c7' }}>Keluar ke Halaman Awal</button>
+            </div>
+          </div>
+        );
       case 'reveal':
         return <Reveal room={room} socket={socket} onLeave={handleLeaveRoom} onBackToLobby={handleBackToLobby} />;
       default:
