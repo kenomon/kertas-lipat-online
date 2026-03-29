@@ -17,11 +17,35 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
   };
 
   if (me?.hasSubmitted) {
+    const pendingPlayers = room.players.filter(p => !p.hasSubmitted);
+    
     return (
       <div className="paper-content" style={{ textAlign: 'center' }}>
         <h2>Menunggu...</h2>
         <p>Anda sudah melipat kertas ini.</p>
-        <p>Menunggu pemain lain selesai menulis...</p>
+        <p>Menunggu {pendingPlayers.length} pemain lain selesai menulis...</p>
+        
+        {pendingPlayers.length > 0 && (
+          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: 'rgba(52, 152, 219, 0.1)', borderRadius: '10px' }}>
+            <p style={{ fontSize: '0.9rem', color: '#7f8c8d', marginBottom: '10px' }}>Belum selesai:</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
+              {pendingPlayers.map(p => (
+                <span key={p.id} style={{ 
+                  padding: '4px 12px', 
+                  backgroundColor: 'white', 
+                  borderRadius: '20px', 
+                  fontSize: '0.85rem',
+                  color: 'var(--ink-color)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  border: '1px solid #eee'
+                }}>
+                  {p.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ marginTop: '30px' }}>
           <button onClick={onCancel} style={{ backgroundColor: '#e74c3c' }}>Ganti Jawaban</button>
         </div>
