@@ -63,34 +63,42 @@ export function rejoinRoom(roomId, newSocketId, playerName, oldSocketId) {
   if (!player) {
     player = room.players.find(p => p.name === playerName);
   }
-  if (!player) return { error: 'Player not found in room' };
+  
+  if (!player) {
+    console.log(`-- REJOIN FAIL: Player ${playerName} (oldId: ${oldSocketId}) not found in room ${roomId} --`);
+    return { error: 'Pemain tidak ditemukan di ruangan ini.' };
+  }
 
   const prevId = player.id;
   // Update player ID
   player.id = newSocketId;
 
   // Update papers: ganti semua referensi ke prevId
+  // Note: paperId adalah originalOwnerId
   for (const paperId in room.papers) {
     const paper = room.papers[paperId];
     if (paper.originalOwnerId === prevId) paper.originalOwnerId = newSocketId;
     if (paper.currentHolderId === prevId) paper.currentHolderId = newSocketId;
-    // Update paperId key jika paper milik pemain ini
   }
-  // Juga update paperId key di papers map jika perlu
+
+  // Juga update key di papers map jika key-nya adalag prevId (artinya dia owner aslinya)
   if (room.papers[prevId]) {
     room.papers[newSocketId] = room.papers[prevId];
     delete room.papers[prevId];
+    console.log(`-- REJOIN: Moved paper ownership from ${prevId} to ${newSocketId} --`);
   }
 
-  // Update steps authorId
+  // Update steps authorId agar pencocokan di cancelStep tetap jalan
   for (const paperId in room.papers) {
     const paper = room.papers[paperId];
-    paper.steps.forEach(step => {
-      if (step.authorId === prevId) step.authorId = newSocketId;
-    });
+    if (paper.steps) {
+      paper.steps.forEach(step => {
+        if (step.authorId === prevId) step.authorId = newSocketId;
+      });
+    }
   }
 
-  console.log(`-- REJOIN: Updated player ${playerName} from ${prevId} to ${newSocketId} in room ${roomId} --`);
+  console.log(`-- REJOIN SUCCESS: Player ${playerName} updated from ${prevId} to ${newSocketId} --`);
   return room;
 }
 
@@ -237,14 +245,15 @@ export function setPassMode(roomId, socketId, passMode) {
 
 export function cancelStep(roomId, socketId) {
   const room = rooms.get(roomId);
-  if (!room || room.state !== 'playing') return { error: 'Game not active' };
+  if (!room) return { error: 'Ruangan tidak ditemukan atau sudah ditutup (server restart).' };
+  if (room.state !== 'playing') return { error: 'Permainan sedang tidak aktif.' };
   
-  // Cari pemain berdasarkan ID stabil (myPlayerId dari frontend)
+  // Cari pemain berdasarkan ID stabil
   const player = room.players.find(p => p.id === socketId);
   
   if (!player) {
-    console.log(`-- SERVER: playerId ${socketId} not found in room ${roomId} --`);
-    return { error: 'Identitas pemain tidak sinkron. Coba refresh halaman.' };
+    console.log(`-- CANCEL FAIL: Player with socketId ${socketId} not found in room ${roomId} --`);
+    return { error: 'Identitas pemain tidak sinkron karena koneksi terputus. Mohon refresh halaman.' };
   }
 
   if (!player.hasSubmitted) {
@@ -262,11 +271,22 @@ export function cancelStep(roomId, socketId) {
 
   if (targetPaper && targetPaper.steps.length > 0) {
     const lastStep = targetPaper.steps[targetPaper.steps.length - 1];
+    
     // Pastikan langkah terakhir memang miliknya di ronde ini
-    if (lastStep.authorId === player.id && lastStep.round === room.round) {
-      targetPaper.steps.pop();
-      console.log(`-- SERVER: Popped step for ${player.name} in round ${room.round} --`);
+    if (lastStep.round === room.round) {
+      if (lastStep.authorId === player.id) {
+        targetPaper.steps.pop();
+        console.log(`-- CANCEL SUCCESS: Popped step for ${player.name} in round ${room.round} --`);
+      } else {
+        console.log(`-- CANCEL WARNING: Author mismatch for ${player.name}. LastStep author: ${lastStep.authorId} vs PlayerId: ${player.id} --`);
+        // Tetap allow cancel status submitted agar pemain bisa mencoba kirim lagi jika terjadi error aneh
+      }
+    } else {
+      console.log(`-- CANCEL FAIL: Round mismatch. Room: ${room.round}, LastStep: ${lastStep.round} --`);
+      return { error: 'Waktu habis! Ronde sudah berganti.' };
     }
+  } else {
+    console.log(`-- CANCEL ERROR: No paper/steps found for ${player.name} --`);
   }
   
   player.hasSubmitted = false;

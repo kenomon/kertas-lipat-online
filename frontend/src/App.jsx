@@ -81,7 +81,17 @@ function App() {
     socket.on('error_message', (msg) => {
       console.error('-- SERVER ERROR --', msg);
       setError(msg);
-      setTimeout(() => setError(''), 5000);
+      // Jangan hapus error terlalu cepat jika sedang "Memproses..."
+      setTimeout(() => setError(''), 8000);
+    });
+
+    socket.on('rejoin_ack', (r) => {
+      console.log('-- REJOIN ACK RECEIVED --', r.id);
+      setRoom(r);
+      // Pastikan steps juga terisi jika sedang bermain
+      if (r.state === 'playing') {
+        setGameState('playing');
+      }
     });
 
     socket.on('kicked', () => {
@@ -146,6 +156,7 @@ function App() {
   const handleCancelStep = () => {
     if (room) {
       console.log('-- ACTION: cancel_step -- roomId:', room.id, 'socketId:', socket.id);
+      setError(''); // Clear previous errors
       socket.emit('cancel_step', { roomId: room.id });
     }
   };

@@ -13,6 +13,10 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
   // Efek untuk membersihkan status loading jika hasSubmitted berubah (berhasil dicancel)
   // ATAU jika terjadi error, agar tombol kembali bisa diklik
   useEffect(() => {
+    // Tombol kembali normal jika:
+    // 1. me.hasSubmitted berubah jadi false (berhasil dicancel)
+    // 2. Ada error baru dari server
+    // 3. me tiba-tiba hilang (rekoneksi sedang berjalan)
     if (!me?.hasSubmitted || error) {
       setIsCancelling(false);
       if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
@@ -67,11 +71,23 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
             opacity: isCancelling ? 0.7 : 1, 
             marginTop: '20px',
             transform: isCancelling ? 'scale(0.98)' : 'scale(1)',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
+            cursor: isCancelling ? 'not-allowed' : 'pointer',
+            padding: '12px 24px',
+            fontSize: '1.1rem'
           }}
         >
-          {isCancelling ? 'Memproses...' : 'Ganti Jawaban'}
+          {isCancelling ? (
+             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <span className="spinner" style={{ width: '16px', height: '16px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></span>
+                Memproses...
+             </span>
+          ) : 'Ganti Jawaban'}
         </button>
+        
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
       </div>
     );
   }

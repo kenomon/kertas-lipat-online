@@ -49,10 +49,14 @@ io.on('connection', (socket) => {
     const result = rejoinRoom(roomIdUpper, socket.id, playerName, oldPlayerId);
     if (result.error) {
       console.log(`-- REJOIN ERROR: ${result.error} --`);
-      // Tidak perlu error ke user, cukup log
+      socket.emit('error_message', result.error);
     } else {
       socket.join(roomIdUpper);
-      socket.emit('rejoin_ack', result);
+      // Gunakan Deep Clone untuk sinkronisasi paksa
+      const freshRoom = JSON.parse(JSON.stringify(result));
+      socket.emit('rejoin_ack', freshRoom);
+      // Beritahu pemain lain bahwa ID sudah diupdate (penting untuk sinkronisasi)
+      io.to(roomIdUpper).emit('room_update', freshRoom);
       console.log(`-- REJOIN SUCCESS: ${playerName} is back in room ${roomIdUpper} --`);
     }
   });
