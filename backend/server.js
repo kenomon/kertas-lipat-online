@@ -149,11 +149,11 @@ io.on('connection', (socket) => {
       console.log(`-- CANCEL STEP ERROR: ${result.error} --`);
       socket.emit('error_message', result.error);
     } else {
-      console.log(`-- CANCEL STEP SUCCESS: Room ${roomId}, Player ${socket.id} --`);
+      console.log(`-- CANCEL STEP SUCCESS: Room ${roomIdUpper}, Player ${socket.id} --`);
       // Gunakan Deep Clone untuk memaksa React di frontend melakukan re-render
       const freshRoom = JSON.parse(JSON.stringify(result));
-      io.to(roomId).emit('room_update', freshRoom);
-      io.to(roomId).emit('game_update', freshRoom);
+      io.to(roomIdUpper).emit('room_update', freshRoom);
+      io.to(roomIdUpper).emit('game_update', freshRoom);
     }
   });
 
