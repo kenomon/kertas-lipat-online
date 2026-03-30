@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, error }) {
   const [text, setText] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
+  const cancelTimerRef = useRef(null);
   
   // Ambil data diri sendiri. Pastikan menggunakan socketId yang stabil.
   const me = room.players.find(p => p.id === (socketId || ''));
@@ -14,6 +15,7 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
   useEffect(() => {
     if (!me?.hasSubmitted || error) {
       setIsCancelling(false);
+      if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
     }
   }, [me?.hasSubmitted, error]);
 
@@ -29,6 +31,12 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
   const handleCancelClick = () => {
     setIsCancelling(true);
     onCancel();
+    
+    // Fail-safe: Jika 5 detik tidak ada respon dari server, riset status tombol
+    if (cancelTimerRef.current) clearTimeout(cancelTimerRef.current);
+    cancelTimerRef.current = setTimeout(() => {
+      setIsCancelling(false);
+    }, 5000);
   };
 
   if (me?.hasSubmitted) {
@@ -41,11 +49,11 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
         <h2 style={{ color: 'var(--ink-color)' }}>Terlipat!</h2>
         <p style={{ fontSize: '1.2rem', margin: '20px 0' }}>Kertasmu sudah dioper. Tunggu pemain lain selesai melipat ya...</p>
         
-        {/* Tampilan progres tanpa kotak latar belakang */}
-        <div style={{ padding: '15px', margin: '20px 0', borderTop: '1px solid #ddd', borderBottom: '1px solid #ddd' }}>
-          <p style={{ fontWeight: 'bold', fontSize: '1.3rem' }}>Progres: {submittedCount} / {totalPlayers} Pemain</p>
+        {/* Tampilan progres tanpa garis dan tanpa latar belakang */}
+        <div style={{ padding: '15px', margin: '20px 0' }}>
+          <p style={{ fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '10px' }}>Progres: {submittedCount} / {totalPlayers} Pemain</p>
           {pendingPlayers.length > 0 && (
-            <p style={{ fontSize: '1rem', color: '#666', marginTop: '10px' }}>Menunggu: <span style={{ fontStyle: 'italic' }}>{pendingPlayers.join(', ')}</span></p>
+            <p style={{ fontSize: '1.1rem', color: '#666' }}>Menunggu: <span style={{ fontStyle: 'italic' }}>{pendingPlayers.join(', ')}</span></p>
           )}
         </div>
 
