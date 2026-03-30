@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { createRoom, joinRoom, validateStart, startGame, submitStep, disconnectUser, getRoom, backToLobby, leaveRoom, setPassMode, movePlayer, cancelStep, setReadyStatus, kickPlayer, setRevealMode, STEPS } from './gameLogic.js';
+import { createRoom, joinRoom, rejoinRoom, validateStart, startGame, submitStep, disconnectUser, getRoom, backToLobby, leaveRoom, setPassMode, movePlayer, cancelStep, setReadyStatus, kickPlayer, setRevealMode, STEPS } from './gameLogic.js';
 
 const app = express();
 app.use(cors());
@@ -39,6 +39,21 @@ io.on('connection', (socket) => {
       socket.join(roomIdUpper);
       socket.emit('room_joined', result);
       io.to(roomIdUpper).emit('room_update', result);
+    }
+  });
+
+  // Saat socket reconnect dengan ID baru, update ID player di room
+  socket.on('rejoin_room', ({ roomId, playerName, oldPlayerId }) => {
+    const roomIdUpper = roomId?.toUpperCase();
+    console.log(`-- REJOIN ROOM REQUEST: Room ${roomIdUpper}, Player ${playerName}, OldId ${oldPlayerId}, NewId ${socket.id} --`);
+    const result = rejoinRoom(roomIdUpper, socket.id, playerName, oldPlayerId);
+    if (result.error) {
+      console.log(`-- REJOIN ERROR: ${result.error} --`);
+      // Tidak perlu error ke user, cukup log
+    } else {
+      socket.join(roomIdUpper);
+      socket.emit('rejoin_ack', result);
+      console.log(`-- REJOIN SUCCESS: ${playerName} is back in room ${roomIdUpper} --`);
     }
   });
 
@@ -139,12 +154,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('cancel_step', ({ roomId, playerId }) => {
+  socket.on('cancel_step', ({ roomId }) => {
     const roomIdUpper = roomId?.toUpperCase();
-    // Gunakan playerId dari frontend jika ada (lebih stabil), fallback ke socket.id
-    const targetId = playerId || socket.id;
-    console.log(`-- CANCEL STEP REQUEST: Room ${roomIdUpper}, Player ${targetId} --`);
-    const result = cancelStep(roomIdUpper, targetId);
+    console.log(`-- CANCEL STEP REQUEST: Room ${roomIdUpper}, Player ${socket.id} --`);
+    const result = cancelStep(roomIdUpper, socket.id);
     if (result.error) {
       console.log(`-- CANCEL STEP ERROR: ${result.error} --`);
       socket.emit('error_message', result.error);

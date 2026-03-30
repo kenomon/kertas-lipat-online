@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import Welcome from './components/Welcome';
 import Lobby from './components/Lobby';
@@ -11,41 +11,59 @@ const SOCKET_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 const socket = io(SOCKET_URL, { autoConnect: false });
 
 function App() {
-  const [gameState, setGameState] = useState('welcome'); // welcome, lobby, playing, reveal
+  const [gameState, setGameState] = useState('welcome');
   const [room, setRoom] = useState(null);
   const [playerName, setPlayerName] = useState('');
-  const [myPlayerId, setMyPlayerId] = useState(''); // ID stabil untuk identitas di server
   const [error, setError] = useState('');
   const [steps, setSteps] = useState([]);
+
+  // Gunakan useRef untuk menyimpan myPlayerId agar selalu up-to-date di semua closure
+  const myPlayerIdRef = useRef('');
+  // Ref untuk room dan playerName agar bisa diakses di socket listeners tanpa stale closure
+  const roomRef = useRef(null);
+  const playerNameRef = useRef('');
+
+  // Sync roomRef dan playerNameRef saat state berubah
+  useEffect(() => { roomRef.current = room; }, [room]);
+  useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
+
+  // Gunakan useRef untuk gameState agar bisa dibaca di dalam socket listeners
+  const gameStateRef = useRef(gameState);
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
 
   useEffect(() => {
     socket.connect();
 
-    const handleUpdate = (r) => {
-      console.log('-- UPDATE RECEIVED --', r.state, r);
-      setRoom(r);
-      // Jika status room kembali ke lobby saat kita sedang playing, tandanya ada gangguan
-      if (gameState === 'playing' && r.state === 'lobby') {
-        setGameState('interrupted');
-      }
-    };
-
     socket.on('room_created', (r) => {
-      setMyPlayerId(socket.id);
+      myPlayerIdRef.current = socket.id;
+      console.log('-- PLAYER ID SET (created):', socket.id, '--');
       setRoom(r);
       setGameState('lobby');
       setError('');
     });
 
     socket.on('room_joined', (r) => {
-      setMyPlayerId(socket.id);
+      myPlayerIdRef.current = socket.id;
+      console.log('-- PLAYER ID SET (joined):', socket.id, '--');
       setRoom(r);
       setGameState('lobby');
       setError('');
     });
 
-    socket.on('room_update', handleUpdate);
-    socket.on('game_update', handleUpdate);
+    socket.on('room_update', (r) => {
+      console.log('-- ROOM UPDATE --', r.state, 'current gameState:', gameStateRef.current);
+      setRoom(r);
+      if (gameStateRef.current === 'playing' && r.state === 'lobby') {
+        setGameState('interrupted');
+      }
+    });
+
+    socket.on('game_update', (r) => {
+      console.log('-- GAME UPDATE --', r.state);
+      setRoom(r);
+    });
 
     socket.on('game_started', ({ room: r, steps: gameSteps }) => {
       setRoom(r);
@@ -73,6 +91,26 @@ function App() {
       setTimeout(() => setError(''), 5000);
     });
 
+    // Event 'connect' dipanggil saat pertama konek DAN saat reconnect
+    socket.on('connect', () => {
+      const prevId = myPlayerIdRef.current;
+      const newId = socket.id;
+      console.log('-- SOCKET CONNECT, id:', newId, '(prev:', prevId, ') --');
+
+      // Hanya proses jika ini reconnect (bukan koneksi pertama)
+      if (prevId && prevId !== newId) {
+        myPlayerIdRef.current = newId;
+        const currentRoom = roomRef.current;
+        const currentName = playerNameRef.current;
+        if (currentRoom && currentName) {
+          console.log('-- RECONNECT: rejoin room', currentRoom.id, 'as', currentName, '--');
+          socket.emit('rejoin_room', { roomId: currentRoom.id, playerName: currentName, oldPlayerId: prevId });
+        }
+      } else {
+        myPlayerIdRef.current = newId;
+      }
+    });
+
     return () => {
       socket.off('room_created');
       socket.off('room_joined');
@@ -82,8 +120,10 @@ function App() {
       socket.off('round_finished');
       socket.off('error_message');
       socket.off('kicked');
+      socket.off('connect');
+      socket.off('rejoin_ack');
     };
-  }, [gameState]);
+  }, []); // <-- Kosong: hanya daftar sekali, pakai Ref agar selalu sinkron
 
   const handleCreateRoom = (name) => {
     setPlayerName(name);
@@ -105,8 +145,8 @@ function App() {
 
   const handleCancelStep = () => {
     if (room) {
-      console.log('-- ACTION: cancel_step --', room.id, myPlayerId);
-      socket.emit('cancel_step', { roomId: room.id, playerId: myPlayerId });
+      console.log('-- ACTION: cancel_step -- roomId:', room.id, 'socketId:', socket.id);
+      socket.emit('cancel_step', { roomId: room.id });
     }
   };
 
@@ -131,9 +171,9 @@ function App() {
       case 'howtoplay':
         return <HowToPlay onBack={handleBackFromHowToPlay} />;
       case 'lobby':
-        return <Lobby room={room} socket={socket} onStart={handleStartGame} error={error} myPlayerId={myPlayerId} />;
+        return <Lobby room={room} socket={socket} onStart={handleStartGame} error={error} myPlayerId={myPlayerIdRef.current} />;
       case 'playing':
-        return <Gameplay room={room} socketId={myPlayerId} steps={steps} onSubmit={handleSubmitStep} onCancel={handleCancelStep} error={error} />;
+        return <Gameplay room={room} socketId={myPlayerIdRef.current} steps={steps} onSubmit={handleSubmitStep} onCancel={handleCancelStep} error={error} />;
       case 'interrupted':
         return (
           <div className="paper-content" style={{ textAlign: 'center' }}>

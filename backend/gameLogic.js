@@ -53,6 +53,48 @@ export function joinRoom(roomId, socketId, playerName) {
   return room;
 }
 
+// Saat socket reconnect, update ID lama ke ID baru agar pemain tetap di room
+export function rejoinRoom(roomId, newSocketId, playerName, oldSocketId) {
+  const room = rooms.get(roomId);
+  if (!room) return { error: 'Room not found' };
+
+  // Cari pemain berdasarkan oldSocketId atau nama (fallback)
+  let player = oldSocketId ? room.players.find(p => p.id === oldSocketId) : null;
+  if (!player) {
+    player = room.players.find(p => p.name === playerName);
+  }
+  if (!player) return { error: 'Player not found in room' };
+
+  const prevId = player.id;
+  // Update player ID
+  player.id = newSocketId;
+
+  // Update papers: ganti semua referensi ke prevId
+  for (const paperId in room.papers) {
+    const paper = room.papers[paperId];
+    if (paper.originalOwnerId === prevId) paper.originalOwnerId = newSocketId;
+    if (paper.currentHolderId === prevId) paper.currentHolderId = newSocketId;
+    // Update paperId key jika paper milik pemain ini
+  }
+  // Juga update paperId key di papers map jika perlu
+  if (room.papers[prevId]) {
+    room.papers[newSocketId] = room.papers[prevId];
+    delete room.papers[prevId];
+  }
+
+  // Update steps authorId
+  for (const paperId in room.papers) {
+    const paper = room.papers[paperId];
+    paper.steps.forEach(step => {
+      if (step.authorId === prevId) step.authorId = newSocketId;
+    });
+  }
+
+  console.log(`-- REJOIN: Updated player ${playerName} from ${prevId} to ${newSocketId} in room ${roomId} --`);
+  return room;
+}
+
+
 export function validateStart(roomId, socketId) {
   const room = rooms.get(roomId);
   if (!room) return { error: 'Room not found' };
