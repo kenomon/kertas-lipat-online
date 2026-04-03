@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
   const [unfolded, setUnfolded] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewedIndices, setViewedIndices] = useState(new Set());
+  const [isTyping, setIsTyping] = useState(false);
+  const [visibleChars, setVisibleChars] = useState(0);
   
   if (!room || !room.papers) return null;
 
@@ -10,6 +13,70 @@ export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
   const isHost = me?.isHost;
   const revealMode = room.revealMode || 'all';
   const allPapers = Object.values(room.papers);
+
+  // Pre-calculate segments for typing effect
+  const paperSegments = useState(() => {
+    return allPapers.map(paper => {
+      return paper.steps.map(step => {
+        let prefix = "";
+        if (step.round === 2) prefix = "Sewaktu ";
+        if (step.round === 6) prefix = "Sampai ";
+        if (step.round === 7) prefix = "Di ";
+        return prefix + step.text;
+      });
+    });
+  })[0];
+
+  // Set initial index for individual mode
+  useEffect(() => {
+    if (revealMode === 'individual') {
+      const myPaperIndex = allPapers.findIndex(paper => paper.currentHolderId === socket.id);
+      if (myPaperIndex !== -1) {
+        setCurrentIndex(myPaperIndex);
+      }
+    }
+  }, [revealMode, socket.id]); // Run once on mount if mode is individual
+
+  const currentSegments = paperSegments[currentIndex] || [];
+  const totalLength = currentSegments.reduce((acc, curr) => acc + curr.length, 0);
+
+  // Typing Effect Logic
+  
+  useEffect(() => {
+    if (!unfolded) return;
+    
+    if (viewedIndices.has(currentIndex)) {
+      setVisibleChars(totalLength);
+      setIsTyping(false);
+      return;
+    }
+
+    // Start typing
+    setIsTyping(true);
+    setVisibleChars(0);
+    
+    const timer = setInterval(() => {
+      setVisibleChars(prev => {
+        if (prev >= totalLength) {
+          clearInterval(timer);
+          setIsTyping(false);
+          setViewedIndices(old => new Set(old).add(currentIndex));
+          return totalLength;
+        }
+        return prev + 1;
+      });
+    }, 30); // 30ms per character
+
+    return () => clearInterval(timer);
+  }, [currentIndex, unfolded, totalLength]);
+
+  const handlePaperClick = () => {
+    if (isTyping) {
+      setVisibleChars(totalLength);
+      setIsTyping(false);
+      setViewedIndices(old => new Set(old).add(currentIndex));
+    }
+  };
 
   const renderEndButtons = () => (
     <div style={{ marginTop: '30px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -21,21 +88,56 @@ export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
     </div>
   );
 
-  const renderPaper = (paper) => (
-    <div style={{ padding: '20px', border: '2px dashed #bdc3c7', borderRadius: '5px', backgroundColor: '#fff', fontSize: '1.4rem', lineHeight: '1.8' }}>
-      {paper.steps.map((step, index) => {
-        let prefix = "";
-        if (step.round === 2) prefix = "Sewaktu ";
-        if (step.round === 6) prefix = "Sampai ";
-        if (step.round === 7) prefix = "Di ";
-        return (
-          <div key={index}>
-            {prefix}<strong>{step.text}</strong>
-          </div>
-        );
-      })}
-    </div>
-  );
+  const renderPaper = (segments, currentVisible) => {
+    let charCount = 0;
+    return (
+      <div 
+        onClick={handlePaperClick}
+        style={{ 
+          padding: '20px', 
+          border: '2px dashed #bdc3c7', 
+          borderRadius: '5px', 
+          backgroundColor: '#fff', 
+          fontSize: '1.4rem', 
+          lineHeight: '1.8',
+          cursor: isTyping ? 'pointer' : 'default',
+          minHeight: '200px'
+        }}
+      >
+        {segments.map((text, idx) => {
+          const start = charCount;
+          charCount += text.length;
+          
+          if (currentVisible <= start) return null;
+          
+          const visibleInThisSegment = Math.min(text.length, currentVisible - start);
+          const visibleText = text.substring(0, visibleInThisSegment);
+          
+          // Split into prefix (if any) and bold text
+          // Note: This is a bit simplified since we joined them. 
+          // Let's re-parse or just show it simply for the typing feel.
+          // To keep the bold style, we need to know where the prefix ends.
+          
+          let prefix = "";
+          let actualText = text;
+          if (text.startsWith("Sewaktu ")) { prefix = "Sewaktu "; actualText = text.substring(8); }
+          else if (text.startsWith("Sampai ")) { prefix = "Sampai "; actualText = text.substring(7); }
+          else if (text.startsWith("Di ")) { prefix = "Di "; actualText = text.substring(3); }
+          
+          // Determine visible prefix and visible actual text
+          const visiblePrefix = visibleText.substring(0, Math.min(visibleText.length, prefix.length));
+          const visibleActual = visibleText.substring(prefix.length);
+
+          return (
+            <div key={idx}>
+              {visiblePrefix}<strong>{visibleActual}</strong>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
 
   // --- Mode: Per Perangkat (individual) ---
   if (revealMode === 'individual') {
@@ -55,7 +157,7 @@ export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
         ) : (
           <div style={{ marginTop: '20px' }}>
             <p style={{ fontWeight: 'bold' }}>Tulisan di dalam kertasmu:</p>
-            {renderPaper(myPaper)}
+            {renderPaper(currentSegments, visibleChars)}
             {renderEndButtons()}
           </div>
         )}
@@ -93,7 +195,7 @@ export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
               style={{ width: 'auto', padding: '8px 14px', fontSize: '1.2rem', backgroundColor: currentIndex === allPapers.length - 1 ? '#bdc3c7' : 'var(--ink-color)' }}
             >→</button>
           </div>
-          {renderPaper(currentPaper)}
+          {renderPaper(currentSegments, visibleChars)}
           {renderEndButtons()}
         </div>
       )}
