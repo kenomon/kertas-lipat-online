@@ -65,7 +65,7 @@ export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
         }
         return prev + 1;
       });
-    }, 30); // 30ms per character
+    }, 50); // 50ms per character
 
     return () => clearInterval(timer);
   }, [currentIndex, unfolded, totalLength]);
