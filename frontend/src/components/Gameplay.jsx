@@ -50,8 +50,8 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
     
     return (
       <div className="paper-content" style={{ textAlign: 'center' }}>
-        <h2 style={{ color: 'var(--ink-color)' }}>Terlipat!</h2>
-        <p style={{ fontSize: '1.2rem', margin: '20px 0' }}>Kertasmu sudah dioper. Tunggu pemain lain selesai melipat ya...</p>
+        <h2 style={{ color: 'var(--ink-color)' }}>Terkirim!</h2>
+        <p style={{ fontSize: '1.2rem', margin: '20px 0' }}>Menunggu pemain lain...</p>
         
         {/* Tampilan progres tanpa garis dan tanpa latar belakang */}
         <div style={{ padding: '15px', margin: '20px 0' }}>
