@@ -29,9 +29,9 @@ export default function Reveal({ room, socket, onLeave, onBackToLobby }) {
         if (step.round === 6) prefix = "Sampai ";
         if (step.round === 7) prefix = "Di ";
         return (
-          <span key={index}>
-            {prefix}<strong>{step.text}</strong>{' '}
-          </span>
+          <div key={index}>
+            {prefix}<strong>{step.text}</strong>
+          </div>
         );
       })}
     </div>
