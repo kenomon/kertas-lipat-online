@@ -1,10 +1,21 @@
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowUp, ArrowDown, Copy, Check } from 'lucide-react';
 
 export default function Lobby({ room, socket, onStart, error }) {
   if (!room) return null;
   
+  const [copied, setCopied] = useState(false);
+  
   const me = room.players.find(p => p.id === socket.id);
   const isHost = me?.isHost;
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}${window.location.pathname}?room=${room.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   
   const handleMove = (playerId, direction) => {
     if (isHost) {
@@ -41,8 +52,24 @@ export default function Lobby({ room, socket, onStart, error }) {
   return (
     <div className="paper-content">
       <h2>Ruang Tunggu</h2>
-      <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '1.5rem' }}>
-        Kode Ruangan: <strong>{room.id}</strong>
+      <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+        <div>Kode Ruangan: <strong>{room.id}</strong></div>
+        <button 
+          onClick={handleCopyLink}
+          style={{ 
+            width: 'auto', 
+            padding: '8px 15px', 
+            fontSize: '1rem', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            backgroundColor: copied ? '#2ecc71' : 'var(--ink-color)',
+            transition: 'background-color 0.3s ease'
+          }}
+        >
+          {copied ? <Check size={18} /> : <Copy size={18} />}
+          {copied ? 'Tersalin!' : 'Salin Link Undangan'}
+        </button>
       </div>
       
       {error && <div className="error-msg">{error}</div>}

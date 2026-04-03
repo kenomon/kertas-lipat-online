@@ -16,6 +16,18 @@ function App() {
   const [playerName, setPlayerName] = useState('');
   const [error, setError] = useState('');
   const [steps, setSteps] = useState([]);
+  const [invitationCode, setInvitationCode] = useState('');
+
+  // Extract room ID from URL query string
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomCode = params.get('room');
+    if (roomCode && roomCode.length === 4) {
+      setInvitationCode(roomCode.toUpperCase());
+      // Clean up URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   // Gunakan useRef untuk menyimpan myPlayerId agar selalu up-to-date di semua closure
   const myPlayerIdRef = useRef('');
@@ -178,7 +190,7 @@ function App() {
   const renderScreen = () => {
     switch (gameState) {
       case 'welcome':
-        return <Welcome onCreate={handleCreateRoom} onJoin={handleJoinRoom} onHowToPlay={handleHowToPlay} error={error} />;
+        return <Welcome onCreate={handleCreateRoom} onJoin={handleJoinRoom} onHowToPlay={handleHowToPlay} error={error} invitationCode={invitationCode} onClearInvitation={() => setInvitationCode('')} />;
       case 'howtoplay':
         return <HowToPlay onBack={handleBackFromHowToPlay} />;
       case 'lobby':

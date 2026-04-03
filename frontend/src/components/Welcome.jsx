@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export default function Welcome({ onCreate, onJoin, onHowToPlay, error }) {
+export default function Welcome({ onCreate, onJoin, onHowToPlay, error, invitationCode, onClearInvitation }) {
   const [modal, setModal] = useState(null); // null | 'create' | 'join'
   const [name, setName] = useState('');
   const [roomId, setRoomId] = useState('');
+
+  // Handle invitation link
+  useEffect(() => {
+    if (invitationCode) {
+      setRoomId(invitationCode);
+      setModal('join');
+      if (onClearInvitation) onClearInvitation();
+    }
+  }, [invitationCode]);
 
   const openModal = (type) => {
     setName('');
