@@ -33,10 +33,30 @@ export function createRoom(socketId, playerName) {
     revealMode: 'individual', // 'all' or 'individual'
     players: [player],
     papers: {}, 
-    round: 1
+    round: 1,
+    lastActivity: Date.now()
   };
   rooms.set(roomId, room);
   return room;
+}
+
+export function updateRoomActivity(roomId) {
+  const room = rooms.get(roomId);
+  if (room) {
+    room.lastActivity = Date.now();
+  }
+}
+
+export function cleanupRooms(timeoutMs) {
+  const now = Date.now();
+  let count = 0;
+  for (const [roomId, room] of rooms.entries()) {
+    if (now - room.lastActivity > timeoutMs) {
+      rooms.delete(roomId);
+      count++;
+    }
+  }
+  return count;
 }
 
 export function joinRoom(roomId, socketId, playerName) {
@@ -50,6 +70,7 @@ export function joinRoom(roomId, socketId, playerName) {
   } else {
     room.players.push({ id: socketId, name: playerName, isHost: false, hasSubmitted: false, isReady: false });
   }
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -99,6 +120,7 @@ export function rejoinRoom(roomId, newSocketId, playerName, oldSocketId) {
   }
 
   console.log(`-- REJOIN SUCCESS: Player ${playerName} updated from ${prevId} to ${newSocketId} --`);
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -138,6 +160,7 @@ export function startGame(roomId) {
     };
   });
   
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -200,6 +223,7 @@ export function submitStep(roomId, socketId, text) {
     }
   }
   
+  updateRoomActivity(roomId);
   return result;
 }
 
@@ -207,6 +231,7 @@ export function backToLobby(roomId) {
   const room = rooms.get(roomId);
   if (room && room.state === 'reveal') {
     room.state = 'lobby';
+    updateRoomActivity(roomId);
   }
   return room;
 }
@@ -228,6 +253,7 @@ export function leaveRoom(roomId, socketId) {
         room.players[randomIndex].isHost = true;
       }
     }
+    updateRoomActivity(roomId);
   }
   return { room, leftName };
 }
@@ -240,6 +266,7 @@ export function setPassMode(roomId, socketId, passMode) {
   if (!caller || !caller.isHost) return { error: 'Only Host can change pass mode' };
   
   room.passMode = passMode;
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -290,6 +317,7 @@ export function cancelStep(roomId, socketId) {
   }
   
   player.hasSubmitted = false;
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -309,6 +337,7 @@ export function movePlayer(roomId, socketId, playerId, direction) {
     [room.players[index + 1], room.players[index]] = [room.players[index], room.players[index + 1]];
   }
   
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -336,6 +365,7 @@ export function disconnectUser(socketId) {
           room.state = 'lobby'; // Reset to lobby
           wasPlaying = true;
         }
+        updateRoomActivity(roomId);
         updatedRooms.push({ room, disconnectedName, wasPlaying });
       }
     }
@@ -355,6 +385,7 @@ export function setReadyStatus(roomId, socketId, isReady) {
   if (!player) return { error: 'Player not found' };
   
   player.isReady = isReady;
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -376,6 +407,7 @@ export function kickPlayer(roomId, hostSocketId, playerToKickId) {
        room.players[0].isHost = true;
     }
   }
+  updateRoomActivity(roomId);
   return room;
 }
 
@@ -387,5 +419,6 @@ export function setRevealMode(roomId, socketId, revealMode) {
   if (!caller || !caller.isHost) return { error: 'Hanya Host yang bisa mengubah mode tampilan' };
 
   room.revealMode = revealMode;
+  updateRoomActivity(roomId);
   return room;
 }

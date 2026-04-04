@@ -2,7 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { createRoom, joinRoom, rejoinRoom, validateStart, startGame, submitStep, disconnectUser, getRoom, backToLobby, leaveRoom, setPassMode, movePlayer, cancelStep, setReadyStatus, kickPlayer, setRevealMode, STEPS } from './gameLogic.js';
+import { createRoom, joinRoom, rejoinRoom, validateStart, startGame, submitStep, disconnectUser, getRoom, backToLobby, leaveRoom, setPassMode, movePlayer, cancelStep, setReadyStatus, kickPlayer, setRevealMode, STEPS, cleanupRooms } from './gameLogic.js';
 
 const app = express();
 app.use(cors());
@@ -189,3 +189,18 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`-- SERVER RUNNING ON PORT ${PORT} --`);
   console.log(`-- HOST BINDING TO 0.0.0.0 --`);
 });
+
+// -- Background Cleanup Task --
+// Memeriksa ruangan setiap 30 menit
+const CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 mins
+const INACTIVITY_THRESHOLD = 4 * 60 * 60 * 1000; // 4 hours
+
+setInterval(() => {
+  console.log(`-- BACKGROUND CLEANUP STARTING (${new Date().toISOString()}) --`);
+  const removedCount = cleanupRooms(INACTIVITY_THRESHOLD);
+  if (removedCount > 0) {
+    console.log(`-- CLEANUP: Removed ${removedCount} inactive rooms --`);
+  } else {
+    console.log(`-- CLEANUP: No inactive rooms found --`);
+  }
+}, CLEANUP_INTERVAL);
