@@ -120,6 +120,11 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
             style={{ flex: 1 }}
           />
         </div>
+        {currentStep?.defaultPrefix && (
+          <p style={{ color: '#e74c3c', fontSize: '0.8rem', marginTop: '5px', fontStyle: 'italic' }}>
+            *Tidak perlu menulis kata "<strong>{currentStep.defaultPrefix.trim()}</strong>" lagi di atas.
+          </p>
+        )}
       </div>
       
       <button 
