@@ -284,7 +284,7 @@ export function cancelStep(roomId, socketId) {
   }
 
   if (!player.hasSubmitted) {
-    return { error: 'Kamu belum mengirim jawaban ronde ini.' };
+    return { error: 'Kamu belum mengirim jawaban bagian ini.' };
   }
 
   // Cari kertas yang saat ini dipegang oleh pemain ini
@@ -310,7 +310,7 @@ export function cancelStep(roomId, socketId) {
       }
     } else {
       console.log(`-- CANCEL FAIL: Round mismatch. Room: ${room.round}, LastStep: ${lastStep.round} --`);
-      return { error: 'Waktu habis! Ronde sudah berganti.' };
+      return { error: 'Waktu habis! Bagian sudah berganti.' };
     }
   } else {
     console.log(`-- CANCEL ERROR: No paper/steps found for ${player.name} --`);

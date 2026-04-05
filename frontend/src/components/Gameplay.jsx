@@ -95,7 +95,7 @@ export default function Gameplay({ room, socketId, steps, onSubmit, onCancel, er
   return (
     <div className="paper-content">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0 }}>Babak {currentRound} / 7</h2>
+        <h2 style={{ margin: 0 }}>Bagian {currentRound} / 7</h2>
         {room.passMode === 'random' && <span style={{ fontSize: '0.8rem', backgroundColor: '#eee', padding: '2px 8px', borderRadius: '4px' }}>Acak</span>}
       </div>
 
